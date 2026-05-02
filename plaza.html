@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界を知る — 広場</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Serif JP', 'Georgia', serif; background: #0a0a0f; color: #d4bc8a; min-height: 100vh; }
+    
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #1e140a;
+      border-bottom: 1px solid rgba(180,140,70,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      z-index: 100;
+    }
+    .nav-link {
+      color: rgba(180,140,70,0.45);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover, .nav-link.active { color: #d4a855; }
+    
+    .plaza-bg {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transition: background 0.3s;
+    }
+    
+    .plaza-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      padding: 20px 30px;
+    }
+    
+    /* 星空 */
+    .stars {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      opacity: 0;
+      animation: twinkle 3s infinite;
+    }
+    @keyframes twinkle { 0%,100% { opacity: 0; } 50% { opacity: 0.8; } }
+    
+    /* 上部コントロール */
+    .control-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 25px;
+      padding: 12px 20px;
+      background: rgba(30,21,10,0.7);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      position: relative;
+      z-index: 2;
+    }
+    .search-box { display: flex; gap: 10px; flex: 1; min-width: 200px; }
+    .search-box input {
+      flex: 1;
+      background: #2a2015;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: #d4bc8a;
+      font-size: 12px;
+      outline: none;
+    }
+    .search-box button {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 30px;
+      padding: 6px 16px;
+      color: rgba(180,140,70,0.7);
+      cursor: pointer;
+    }
+    .filter-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .filter-btn, .sort-btn {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.25);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: rgba(180,140,70,0.5);
+      cursor: pointer;
+    }
+    .filter-btn:hover, .sort-btn:hover { border-color: rgba(180,140,70,0.6); color: #d4a855; }
+    .filter-btn.active, .sort-btn.active { background: rgba(180,140,70,0.15); border-color: #d4a855; color: #d4a855; }
+    
+    /* ランキングセクション */
+    .ranking-section {
+      background: linear-gradient(135deg, rgba(80,60,100,0.3), rgba(50,30,60,0.2));
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(180,140,70,0.2);
+      position: relative;
+      z-index: 2;
+    }
+    .ranking-title {
+      font-size: 14px;
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ranking-list { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 10px; }
+    .ranking-item {
+      min-width: 100px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .ranking-item:hover { transform: translateY(-5px); }
+    .ranking-number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #d4a855;
+      margin-bottom: 5px;
+    }
+    .ranking-cover {
+      width: 80px;
+      height: 110px;
+      background: #2a1f0e;
+      border-radius: 3px 6px 6px 3px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 3px 3px 10px rgba(0,0,0,0.3);
+    }
+    .ranking-title-text { font-size: 9px; }
+    
+    /* レコメンドセクション */
+    .recommend-section {
+      background: linear-gradient(135deg, rgba(60,80,100,0.3), rgba(30,50,60,0.2));
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(180,140,70,0.2);
+    }
+    .recommend-books { display: flex; gap: 20px; overflow-x: auto; }
+    .recommend-card {
+      min-width: 120px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .recommend-card:hover { transform: translateY(-5px); }
+    .recommend-cover {
+      width: 100px;
+      height: 130px;
+      background: #2a1f0e;
+      border-radius: 3px 6px 6px 3px;
+      margin: 0 auto 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+    }
+    
+    /* 本のグリッド */
+    .books-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      max-width: 1300px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+    .book-card {
+      width: 180px;
+      cursor: pointer;
+      transition: transform 0.3s ease;
+      animation: floatIn 0.5s ease backwards;
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .book-card:hover { transform: translateY(-8px); background: rgba(0,0,0,0.4); }
+    @keyframes floatIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .book-cover {
+      width: 156px;
+      height: 210px;
+      background: #2a1f0e;
+      border-radius: 3px 6px 6px 3px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 10px;
+    }
+    .book-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .book-cover .no-cover {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: linear-gradient(145deg, #3a2a1a, #1a1208);
+      font-size: 48px;
+    }
+    
+    .book-title {
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      color: #d4bc8a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: center;
+    }
+    .book-author {
+      font-size: 9px;
+      color: rgba(180,140,70,0.4);
+      text-align: center;
+      margin-top: 4px;
+    }
+    
+    /* レーティング（星） */
+    .rating {
+      display: flex;
+      justify-content: center;
+      gap: 3px;
+      margin: 8px 0;
+    }
+    .star {
+      font-size: 14px;
+      cursor: pointer;
+      color: rgba(180,140,70,0.3);
+      transition: color 0.2s;
+    }
+    .star:hover, .star.active { color: #ffc107; }
+    .star.filled { color: #ffc107; }
+    
+    /* お気に入りボタン */
+    .favorite-btn {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: rgba(180,140,70,0.4);
+      transition: all 0.2s;
+    }
+    .favorite-btn:hover { transform: scale(1.1); }
+    .favorite-btn.active { color: #ffc107; }
+    
+    .book-stats {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 9px;
+      color: rgba(180,140,70,0.4);
+      margin-top: 6px;
+    }
+    .like-btn { cursor: pointer; transition: all 0.2s; }
+    .like-btn:hover { color: #ff6b6b; }
+    .liked { color: #ff6b6b; }
+    
+    /* モーダル */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 300;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .modal.open { opacity: 1; pointer-events: all; }
+    .modal-content {
+      background: #231a0c;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-content h3 { margin-bottom: 15px; color: #d4a855; }
+    .review-textarea {
+      width: 100%;
+      background: #2a2015;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 8px;
+      padding: 10px;
+      color: #d4bc8a;
+      font-size: 12px;
+      margin: 10px 0;
+      resize: vertical;
+    }
+    .comment-item {
+      border-bottom: 1px solid rgba(180,140,70,0.2);
+      padding: 10px 0;
+    }
+    .comment-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 5px;
+    }
+    .review-item {
+      border-bottom: 1px solid rgba(180,140,70,0.2);
+      padding: 12px 0;
+    }
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      font-size: 11px;
+    }
+    .review-stars { color: #ffc107; font-size: 11px; }
+    .share-url {
+      background: #2a2015;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      word-break: break-all;
+      margin: 10px 0;
+    }
+    .modal-close {
+      background: rgba(180,140,70,0.2);
+      border: 1px solid #d4a855;
+      border-radius: 30px;
+      padding: 8px 20px;
+      color: #d4a855;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    
+    .empty-message { text-align: center; padding: 80px; color: rgba(180,140,70,0.3); }
+    
+    /* ビューワー */
+    .book-viewer {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 8, 5, 0.98);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .book-viewer.open { opacity: 1; pointer-events: all; }
+    .viewer-close {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      color: rgba(180,140,70,0.6);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .book-3d { display: flex; perspective: 1200px; }
+    .book-page {
+      width: 340px;
+      height: 460px;
+      background: #faf8f0;
+      padding: 32px 28px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #2a1f0e;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+    .page-left { border-radius: 4px 0 0 4px; border-right: 1px solid #e0d8c8; }
+    .page-right { border-radius: 0 4px 4px 0; }
+    .viewer-controls { display: flex; gap: 24px; margin-top: 28px; }
+    .viewer-nav {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      color: rgba(180,140,70,0.7);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="shelf.html" class="nav-link">📚 本棚</a>
+    <a href="atelier.html" class="nav-link">✒️ アトリエ</a>
+    <a href="plaza.html" class="nav-link active">🕊️ 広場</a>
+    <a href="skins.html" class="nav-link">🎨 スキン</a>
+    <a href="profile.html" class="nav-link">👤 プロフィール</a>
+  </nav>
+
+  <div class="plaza-bg" id="plazaBg">
+    <div class="stars" id="stars"></div>
+    <div class="plaza-container">
+      <div class="control-bar">
+        <div class="search-box">
+          <input type="text" id="searchInput" placeholder="🔍 タイトルまたは作者で検索...">
+          <button id="clearSearchBtn">クリア</button>
+        </div>
+        <div class="filter-group">
+          <button class="sort-btn active" data-sort="new">🆕 新着順</button>
+          <button class="sort-btn" data-sort="views">👁️ 閲覧数順</button>
+          <button class="sort-btn" data-sort="likes">❤️ いいね順</button>
+          <button class="sort-btn" data-sort="rating">⭐ 評価順</button>
+        </div>
+      </div>
+
+      <!-- 月間ランキング -->
+      <div class="ranking-section" id="rankingSection">
+        <div class="ranking-title">🏆 月間ランキング</div>
+        <div class="ranking-list" id="rankingList"></div>
+      </div>
+
+      <!-- レコメンド -->
+      <div class="recommend-section" id="recommendSection">
+        <div class="ranking-title">📖 あなたへのおすすめ</div>
+        <div class="recommend-books" id="recommendBooks"></div>
+      </div>
+
+      <div class="books-grid" id="booksGrid"></div>
+    </div>
+  </div>
+
+  <!-- ビューワー -->
+  <div class="book-viewer" id="bookViewer">
+    <button class="viewer-close" id="viewerClose">✕</button>
+    <div class="book-3d" id="book3d">
+      <div class="book-page page-left" id="pageLeft"></div>
+      <div class="book-page page-right" id="pageRight"></div>
+      <div class="book-spine-3d"></div>
+    </div>
+    <div class="viewer-controls">
+      <button class="viewer-nav" id="prevPage">‹</button>
+      <span class="page-num" id="pageNum">1 / 1</span>
+      <button class="viewer-nav" id="nextPage">›</button>
+    </div>
+  </div>
+
+  <!-- レビューモーダル -->
+  <div class="modal" id="reviewModal">
+    <div class="modal-content">
+      <h3>📝 レビューを書く</h3>
+      <div class="rating" id="modalRating">
+        <span class="star" data-star="1">☆</span><span class="star" data-star="2">☆</span><span class="star" data-star="3">☆</span><span class="star" data-star="4">☆</span><span class="star" data-star="5">☆</span>
+      </div>
+      <textarea class="review-textarea" id="reviewText" rows="4" placeholder="感想を書いてください..."></textarea>
+      <button class="modal-close" id="submitReviewBtn">投稿する</button>
+      <button class="modal-close" id="closeReviewModal">キャンセル</button>
+    </div>
+  </div>
+
+  <!-- コメントモーダル -->
+  <div class="modal" id="commentModal">
+    <div class="modal-content">
+      <h3>💬 コメント</h3>
+      <div id="commentsList"></div>
+      <textarea class="review-textarea" id="commentText" rows="2" placeholder="コメントを書く..."></textarea>
+      <button class="modal-close" id="submitCommentBtn">投稿</button>
+      <button class="modal-close" id="closeCommentModal">閉じる</button>
+    </div>
+  </div>
+
+  <!-- シェアモーダル -->
+  <div class="modal" id="shareModal">
+    <div class="modal-content">
+      <h3>🔗 この本をシェア</h3>
+      <div class="share-url" id="shareUrl"></div>
+      <button class="modal-close" id="copyShareBtn">📋 URLをコピー</button>
+      <button class="modal-close" id="closeShareModal">閉じる</button>
+    </div>
+  </div>
+
+  <script>
+    // 星空生成
+    function generateStars() {
+      const starsContainer = document.getElementById('stars');
+      if (!starsContainer) return;
+      starsContainer.innerHTML = '';
+      for (let i = 0; i < 200; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.width = Math.random() * 2 + 1 + 'px';
+        star.style.height = star.style.width;
+        star.style.animationDelay = Math.random() * 5 + 's';
+        star.style.animationDuration = Math.random() * 3 + 2 + 's';
+        starsContainer.appendChild(star);
+      }
+    }
+    generateStars();
+    
+    // スキン適用
+    const savedSkinCss = localStorage.getItem('plazaSkinCss');
+    if (savedSkinCss) document.getElementById('plazaBg').style.cssText = savedSkinCss;
+    
+    let allBooks = [];
+    let currentSort = 'new';
+    let currentSearch = '';
+    let currentUser = sessionStorage.getItem('userName') || '名無し';
+    let currentBookForModal = null;
+    
+    // データストレージ
+    const LIKES_KEY = 'plazaLikes';
+    const REVIEWS_KEY = 'plazaReviews';
+    const COMMENTS_KEY = 'plazaComments';
+    const FAVORITES_KEY = 'plazaFavorites';
+    const RATINGS_KEY = 'plazaRatings';
+    
+    function loadLikes() { const saved = localStorage.getItem(LIKES_KEY); return saved ? JSON.parse(saved) : {}; }
+    function saveLikes(likes) { localStorage.setItem(LIKES_KEY, JSON.stringify(likes)); }
+    function loadReviews() { const saved = localStorage.getItem(REVIEWS_KEY); return saved ? JSON.parse(saved) : {}; }
+    function saveReviews(reviews) { localStorage.setItem(REVIEWS_KEY, JSON.stringify(reviews)); }
+    function loadComments() { const saved = localStorage.getItem(COMMENTS_KEY); return saved ? JSON.parse(saved) : {}; }
+    function saveComments(comments) { localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments)); }
+    function loadFavorites() { const saved = localStorage.getItem(FAVORITES_KEY); return saved ? JSON.parse(saved) : []; }
+    function saveFavorites(favorites) { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites)); }
+    function loadRatings() { const saved = localStorage.getItem(RATINGS_KEY); return saved ? JSON.parse(saved) : {}; }
+    function saveRatings(ratings) { localStorage.setItem(RATINGS_KEY, JSON.stringify(ratings)); }
+    
+    // デモ本
+    const demoBooks = [
+      { id: 'demo1', title: '銀河の果て', author: '星野 一', cover: null, views: 156, likes: 23, pages: ['第一章\n\n宇宙の果てで見つけた光。'], createdAt: Date.now() - 86400000 * 3, isDemo: true, tags: ['SF', '宇宙'] },
+      { id: 'demo2', title: '雨の図書館', author: '木村 葵', cover: null, views: 89, likes: 12, pages: ['プロローグ\n\n古い図書館の物語。'], createdAt: Date.now() - 86400000 * 5, isDemo: true, tags: ['ファンタジー'] },
+      { id: 'demo3', title: '静かな声', author: '白石 詩', cover: null, views: 234, likes: 45, pages: ['言葉にならない感情を。'], createdAt: Date.now() - 86400000 * 7, isDemo: true, tags: ['詩', '哲学'] },
+      { id: 'demo4', title: '終わりの始まり', author: '終 始也', cover: null, views: 67, likes: 8, pages: ['世界の最後の日に。'], createdAt: Date.now() - 86400000 * 2, isDemo: true, tags: ['哲学'] },
+      { id: 'demo5', title: '午前3時の哲学', author: '夜見 零', cover: null, views: 120, likes: 34, pages: ['眠れない夜に。'], createdAt: Date.now(), isDemo: true, tags: ['哲学'] },
+    ];
+    
+    const sampleColors = ['#1a3a5c', '#2d5a2d', '#4a2d6b', '#6b2d2d', '#1a4a4a'];
+    
+    function loadBooks() {
+      const myBooks = JSON.parse(localStorage.getItem('myBooks') || '[]');
+      const formattedMyBooks = myBooks.map(book => ({ ...book, isDemo: false, tags: book.tags || [] }));
+      allBooks = [...formattedMyBooks, ...demoBooks];
+      sortAndRender();
+    }
+    
+    function sortAndRender() {
+      let filtered = [...allBooks];
+      if (currentSearch) {
+        filtered = filtered.filter(b => b.title.toLowerCase().includes(currentSearch.toLowerCase()) || b.author.toLowerCase().includes(currentSearch.toLowerCase()));
+      }
+      if (currentSort === 'new') filtered.sort((a, b) => b.createdAt - a.createdAt);
+      else if (currentSort === 'views') filtered.sort((a, b) => (b.views || 0) - (a.views || 0));
+      else if (currentSort === 'likes') filtered.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+      else if (currentSort === 'rating') {
+        const ratings = loadRatings();
+        filtered.sort((a, b) => ((ratings[b.id] || 0) - (ratings[a.id] || 0)));
+      }
+      renderRanking();
+      renderRecommendations();
+      renderBooksGrid(filtered);
+    }
+    
+    // 月間ランキング
+    function renderRanking() {
+      const container = document.getElementById('rankingList');
+      if (!container) return;
+      const now = Date.now();
+      const monthAgo = now - 30 * 24 * 60 * 60 * 1000;
+      const recentBooks = allBooks.filter(b => b.createdAt > monthAgo);
+      const ranked = [...recentBooks].sort((a, b) => (b.likes || 0) - (a.likes || 0)).slice(0, 10);
+      if (ranked.length === 0) { container.innerHTML = '<div>まだデータがありません</div>'; return; }
+      container.innerHTML = ranked.map((book, idx) => `
+        <div class="ranking-item" onclick="openBookFromId('${book.id}')">
+          <div class="ranking-number">${idx + 1}</div>
+          <div class="ranking-cover" style="background: ${sampleColors[idx % sampleColors.length]}">📖</div>
+          <div class="ranking-title-text">${book.title.length > 8 ? book.title.slice(0, 8) + '…' : book.title}</div>
+        </div>
+      `).join('');
+    }
+    
+    // レコメンド（タグベース）
+    function renderRecommendations() {
+      const container = document.getElementById('recommendBooks');
+      if (!container) return;
+      const userFavorites = loadFavorites();
+      if (userFavorites.length === 0) { container.innerHTML = '<div style="color:rgba(180,140,70,0.4);">お気に入りを登録するとおすすめが表示されます</div>'; return; }
+      const favBooks = allBooks.filter(b => userFavorites.includes(b.id));
+      const favTags = [...new Set(favBooks.flatMap(b => b.tags || []))];
+      const recommended = allBooks.filter(b => !userFavorites.includes(b.id) && b.tags?.some(t => favTags.includes(t))).slice(0, 6);
+      if (recommended.length === 0) { container.innerHTML = '<div style="color:rgba(180,140,70,0.4);">おすすめはありません</div>'; return; }
+      container.innerHTML = recommended.map(book => `
+        <div class="recommend-card" onclick="openBookFromId('${book.id}')">
+          <div class="recommend-cover" style="background: ${sampleColors[Math.abs(book.id.toString().length) % sampleColors.length]}">📖</div>
+          <div class="recommend-title-text">${book.title.length > 10 ? book.title.slice(0, 10) + '…' : book.title}</div>
+        </div>
+      `).join('');
+    }
+    
+    function renderBooksGrid(filteredBooks) {
+      const grid = document.getElementById('booksGrid');
+      if (!grid) return;
+      if (filteredBooks.length === 0) { grid.innerHTML = '<div class="empty-message">📖 本が見つかりませんでした</div>'; return; }
+      
+      const likes = loadLikes();
+      const favorites = loadFavorites();
+      const ratings = loadRatings();
+      const reviews = loadReviews();
+      
+      grid.innerHTML = filteredBooks.map((book, idx) => {
+        const isLiked = likes[`${book.id}_${currentUser}`];
+        const isFavorited = favorites.includes(book.id);
+        const rating = ratings[book.id] || 0;
+        const reviewCount = reviews[book.id]?.length || 0;
+        
+        return `
+          <div class="book-card" data-id="${book.id}">
+            <div class="book-cover">
+              <div class="no-cover" style="background: ${sampleColors[idx % sampleColors.length]}">📖</div>
+            </div>
+            <div class="book-title">${book.title.length > 14 ? book.title.slice(0, 14) + '…' : book.title}</div>
+            <div class="book-author">${book.author}</div>
+            <div class="rating" data-id="${book.id}">
+              ${[1,2,3,4,5].map(star => `<span class="star ${star <= rating ? 'filled' : ''}" data-star="${star}">★</span>`).join('')}
+            </div>
+            <div class="book-stats">
+              <button class="favorite-btn ${isFavorited ? 'active' : ''}" data-id="${book.id}">⭐</button>
+              <span class="like-btn ${isLiked ? 'liked' : ''}" data-id="${book.id}">❤️ ${book.likes || 0}</span>
+              <span class="review-btn" data-id="${book.id}">💬 ${reviewCount}</span>
+              <span class="share-btn" data-id="${book.id}">🔗</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // イベント登録
+      document.querySelectorAll('.star').forEach(star => {
+        star.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = star.closest('.rating').dataset.id;
+          const ratingVal = parseInt(star.dataset.star);
+          const ratings = loadRatings();
+          ratings[bookId] = ratingVal;
+          saveRatings(ratings);
+          sortAndRender();
+        });
+      });
+      
+      document.querySelectorAll('.favorite-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = btn.dataset.id;
+          const favorites = loadFavorites();
+          const index = favorites.indexOf(bookId);
+          if (index === -1) favorites.push(bookId);
+          else favorites.splice(index, 1);
+          saveFavorites(favorites);
+          sortAndRender();
+        });
+      });
+      
+      document.querySelectorAll('.like-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = btn.dataset.id;
+          const likes = loadLikes();
+          const key = `${bookId}_${currentUser}`;
+          const book = allBooks.find(b => b.id == bookId);
+          if (likes[key]) {
+            delete likes[key];
+            if (book) book.likes = Math.max(0, (book.likes || 0) - 1);
+          } else {
+            likes[key] = true;
+            if (book) book.likes = (book.likes || 0) + 1;
+          }
+          saveLikes(likes);
+          if (book && !book.isDemo) {
+            const myBooks = JSON.parse(localStorage.getItem('myBooks') || '[]');
+            const idx = myBooks.findIndex(b => b.id == bookId);
+            if (idx !== -1) myBooks[idx].likes = book.likes;
+            localStorage.setItem('myBooks', JSON.stringify(myBooks));
+          }
+          sortAndRender();
+        });
+      });
+      
+      document.querySelectorAll('.review-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = btn.dataset.id;
+          currentBookForModal = allBooks.find(b => b.id == bookId);
+          openReviewModal();
+        });
+      });
+      
+      document.querySelectorAll('.share-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = btn.dataset.id;
+          currentBookForModal = allBooks.find(b => b.id == bookId);
+          openShareModal();
+        });
+      });
+      
+      document.querySelectorAll('.book-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const bookId = card.dataset.id;
+          const book = allBooks.find(b => b.id == bookId);
+          if (book) openBook(book);
+        });
+      });
+    }
+    
+    // レビューモーダル
+    let selectedRating = 0;
+    function openReviewModal() {
+      selectedRating = 0;
+      document.getElementById('modalRating').innerHTML = [1,2,3,4,5].map(s => `<span class="star" data-star="${s}">☆</span>`).join('');
+      document.querySelectorAll('#modalRating .star').forEach(star => {
+        star.addEventListener('click', (e) => {
+          selectedRating = parseInt(e.target.dataset.star);
+          document.querySelectorAll('#modalRating .star').forEach((s, i) => {
+            s.textContent = i < selectedRating ? '★' : '☆';
+          });
+        });
+      });
+      document.getElementById('reviewText').value = '';
+      document.getElementById('reviewModal').classList.add('open');
+    }
+    
+    document.getElementById('submitReviewBtn')?.addEventListener('click', () => {
+      const comment = document.getElementById('reviewText').value.trim();
+      if (!comment) { alert('レビュー内容を入力してください'); return; }
+      if (selectedRating === 0) { alert('評価を選んでください'); return; }
+      const reviews = loadReviews();
+      if (!reviews[currentBookForModal.id]) reviews[currentBookForModal.id] = [];
+      reviews[currentBookForModal.id].push({
+        id: Date.now(),
+        userName: currentUser,
+        rating: selectedRating,
+        comment: comment,
+        createdAt: Date.now()
+      });
+      saveReviews(reviews);
+      document.getElementById('reviewModal').classList.remove('open');
+      sortAndRender();
+    });
+    
+    document.getElementById('closeReviewModal')?.addEventListener('click', () => {
+      document.getElementById('reviewModal').classList.remove('open');
+    });
+    
+    // コメント機能
+    function openCommentModal(bookId) {
+      currentBookForModal = allBooks.find(b => b.id == bookId);
+      const comments = loadComments();
+      const bookComments = comments[bookId] || [];
+      const container = document.getElementById('commentsList');
+      container.innerHTML = bookComments.map(c => `
+        <div class="comment-item">
+          <div class="comment-header"><span>${c.userName}</span><span>${new Date(c.createdAt).toLocaleDateString()}</span></div>
+          <div>${c.comment}</div>
+        </div>
+      `).join('');
+      document.getElementById('commentText').value = '';
+      document.getElementById('commentModal').classList.add('open');
+    }
+    
+    document.getElementById('submitCommentBtn')?.addEventListener('click', () => {
+      const comment = document.getElementById('commentText').value.trim();
+      if (!comment) { alert('コメントを入力してください'); return; }
+      const comments = loadComments();
+      if (!comments[currentBookForModal.id]) comments[currentBookForModal.id] = [];
+      comments[currentBookForModal.id].push({
+        id: Date.now(),
+        userName: currentUser,
+        comment: comment,
+        createdAt: Date.now()
+      });
+      saveComments(comments);
+      document.getElementById('commentModal').classList.remove('open');
+      sortAndRender();
+    });
+    
+    document.getElementById('closeCommentModal')?.addEventListener('click', () => {
+      document.getElementById('commentModal').classList.remove('open');
+    });
+    
+    // シェア機能
+    function openShareModal() {
+      const url = `${window.location.origin}${window.location.pathname}?book=${currentBookForModal.id}`;
+      document.getElementById('shareUrl').textContent = url;
+      document.getElementById('shareModal').classList.add('open');
+    }
+    
+    document.getElementById('copyShareBtn')?.addEventListener('click', () => {
+      const url = document.getElementById('shareUrl').textContent;
+      navigator.clipboard.writeText(url);
+      alert('URLをコピーしました！');
+    });
+    
+    document.getElementById('closeShareModal')?.addEventListener('click', () => {
+      document.getElementById('shareModal').classList.remove('open');
+    });
+    
+    // ビューワー
+    const bookViewer = document.getElementById('bookViewer');
+    const viewerClose = document.getElementById('viewerClose');
+    const pageLeft = document.getElementById('pageLeft');
+    const pageRight = document.getElementById('pageRight');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageNumEl = document.getElementById('pageNum');
+    
+    let currentBook = null;
+    let currentPage = 0;
+    
+    function formatText(text) { return text ? text.replace(/\n/g, '<br>') : ''; }
+    
+    function renderPages() {
+      if (!currentBook) return;
+      const pages = currentBook.pages || ['本文がありません'];
+      const leftIdx = currentPage * 2;
+      const rightIdx = currentPage * 2 + 1;
+      pageLeft.innerHTML = leftIdx < pages.length ? `<div>${formatText(pages[leftIdx])}</div><div style="position:absolute;bottom:20px;left:28px;">${leftIdx + 1}</div>` : '<div>— 空白 —</div>';
+      pageRight.innerHTML = rightIdx < pages.length ? `<div>${formatText(pages[rightIdx])}</div><div style="position:absolute;bottom:20px;right:28px;">${rightIdx + 1}</div>` : rightIdx === pages.length ? '<div>— 終わり —</div>' : '';
+      const spreadCount = Math.ceil(pages.length / 2);
+      pageNumEl.textContent = `${currentPage + 1} / ${spreadCount}`;
+    }
+    
+    function nextPage() { const spreadCount = Math.ceil((currentBook?.pages?.length || 0) / 2); if (currentPage < spreadCount - 1) { currentPage++; renderPages(); } }
+    function prevPage() { if (currentPage > 0) { currentPage--; renderPages(); } }
+    
+    function openBook(book) {
+      currentBook = book;
+      currentPage = 0;
+      renderPages();
+      bookViewer.classList.add('open');
+      if (!book.isDemo) {
+        book.views = (book.views || 0) + 1;
+        const myBooks = JSON.parse(localStorage.getItem('myBooks') || '[]');
+        const idx = myBooks.findIndex(b => b.id == book.id);
+        if (idx !== -1) myBooks[idx].views = book.views;
+        localStorage.setItem('myBooks', JSON.stringify(myBooks));
+      }
+    }
+    
+    function openBookFromId(id) {
+      const book = allBooks.find(b => b.id == id);
+      if (book) openBook(book);
+    }
+    
+    function closeViewer() { bookViewer.classList.remove('open'); }
+    
+    viewerClose.addEventListener('click', closeViewer);
+    prevBtn.addEventListener('click', prevPage);
+    nextBtn.addEventListener('click', nextPage);
+    bookViewer.addEventListener('click', (e) => { if (e.target === bookViewer) closeViewer(); });
+    document.addEventListener('keydown', (e) => {
+      if (!bookViewer.classList.contains('open')) return;
+      if (e.key === 'ArrowRight') nextPage();
+      if (e.key === 'ArrowLeft') prevPage();
+      if (e.key === 'Escape') closeViewer();
+    });
+    
+    document.getElementById('clearSearchBtn')?.addEventListener('click', () => {
+      document.getElementById('searchInput').value = '';
+      currentSearch = '';
+      sortAndRender();
+    });
+    document.getElementById('searchInput')?.addEventListener('input', (e) => {
+      currentSearch = e.target.value;
+      sortAndRender();
+    });
+    document.querySelectorAll('.sort-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentSort = btn.dataset.sort;
+        sortAndRender();
+      });
+    });
+    
+    window.openBookFromId = openBookFromId;
+    window.openCommentModal = openCommentModal;
+    
+    loadBooks();
+  </script>
+</body>
+</html>

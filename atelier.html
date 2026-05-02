@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界を知る — アトリエ</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Serif JP', 'Georgia', serif; background: #1a1510; color: #d4bc8a; min-height: 100vh; }
+    
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #1e140a;
+      border-bottom: 1px solid rgba(180,140,70,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      z-index: 100;
+    }
+    .nav-link {
+      color: rgba(180,140,70,0.45);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover, .nav-link.active { color: #d4a855; }
+    
+    .atelier-bg {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transition: background 0.3s;
+    }
+    
+    .atelier-desk {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      padding: 20px;
+    }
+    
+    .tool-panel { display: flex; flex-direction: column; gap: 8px; background: #1e150a; border: 1px solid rgba(180,140,70,0.18); border-radius: 12px; padding: 16px 12px; }
+    .tool-btn { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: rgba(180,140,70,0.45); cursor: pointer; transition: all 0.2s; }
+    .tool-btn:hover { background: rgba(180,140,70,0.08); color: #d4a855; }
+    .tool-btn.active { background: rgba(180,140,70,0.14); border-color: rgba(180,140,70,0.45); color: #d4a855; }
+    .tool-divider { width: 100%; height: 1px; background: rgba(180,140,70,0.12); margin: 6px 0; }
+    
+    .eraser-cursor { position: fixed; border: 2px solid rgba(255,100,100,0.8); border-radius: 50%; background: rgba(255,100,100,0.2); pointer-events: none; z-index: 1000; display: none; }
+    
+    .canvas-wrap { width: 560px; height: 780px; background: #faf8f0; border-radius: 4px; box-shadow: 8px 8px 32px rgba(0,0,0,0.6); position: relative; }
+    .canvas-wrap canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; cursor: crosshair; }
+    .grid-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; background-image: linear-gradient(rgba(180,140,70,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(180,140,70,0.1) 1px, transparent 1px); background-size: 20px 20px; z-index: 5; }
+    .grid-overlay.show { display: block; }
+    
+    .page-controls {
+      position: absolute;
+      bottom: -56px;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: rgba(30,21,10,0.95);
+      padding: 10px 24px;
+      border-radius: 40px;
+      backdrop-filter: blur(4px);
+    }
+    .page-btn { background: transparent; border: 1px solid rgba(180,140,70,0.3); color: rgba(180,140,70,0.7); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+    .page-btn:hover { border-color: #d4a855; color: #d4a855; }
+    .page-indicator { font-size: 13px; color: rgba(180,140,70,0.6); min-width: 100px; text-align: center; }
+    .page-add-btn { background: rgba(180,140,70,0.2); border: 1px solid rgba(180,140,70,0.4); color: #d4a855; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 20px; }
+    .page-add-btn:hover { background: rgba(180,140,70,0.4); }
+    
+    .prop-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: #1e150a;
+      border: 1px solid rgba(180,140,70,0.18);
+      border-radius: 12px;
+      padding: 20px 16px;
+      min-width: 200px;
+      height: 780px;
+      overflow-y: auto;
+    }
+    .prop-section { display: flex; flex-direction: column; gap: 8px; }
+    .prop-label { font-size: 10px; color: rgba(180,140,70,0.38); letter-spacing: 0.22em; }
+    .prop-colors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .color-dot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 1px solid transparent; transition: transform 0.15s; }
+    .color-dot:hover { transform: scale(1.2); }
+    .color-dot.active { border-color: white; transform: scale(1.15); }
+    .prop-sizes { display: flex; gap: 8px; flex-wrap: wrap; }
+    .size-btn { flex: 1; min-width: 40px; height: 32px; background: transparent; border: 1px solid rgba(180,140,70,0.22); border-radius: 4px; color: rgba(180,140,70,0.5); font-size: 11px; cursor: pointer; }
+    .size-btn:hover, .size-btn.active { background: rgba(180,140,70,0.12); border-color: rgba(180,140,70,0.5); color: #d4a855; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 10px; color: rgba(180,140,70,0.4); }
+    .prop-slider { width: 100%; accent-color: #d4a855; }
+    .font-select { width: 100%; background: #150f07; border: 1px solid rgba(180,140,70,0.22); border-radius: 4px; color: #d4bc8a; font-size: 12px; padding: 8px; }
+    .template-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .template-thumb { width: 44px; height: 60px; border-radius: 3px; cursor: pointer; border: 1px solid rgba(180,140,70,0.18); overflow: hidden; display: flex; flex-direction: column; }
+    .shape-buttons { display: flex; gap: 5px; flex-wrap: wrap; }
+    .shape-btn { width: 40px; height: 40px; background: transparent; border: 1px solid rgba(180,140,70,0.22); border-radius: 6px; font-size: 20px; cursor: pointer; }
+    .shape-btn:hover { background: rgba(180,140,70,0.12); border-color: #d4a855; }
+    .shape-btn.active { background: rgba(180,140,70,0.2); border-color: #d4a855; }
+    .mode-switch { display: flex; gap: 8px; margin-top: 5px; }
+    .mode-btn {
+      flex: 1;
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 20px;
+      padding: 5px;
+      font-size: 10px;
+      cursor: pointer;
+      color: rgba(180,140,70,0.6);
+    }
+    .mode-btn.active { background: rgba(180,140,70,0.2); border-color: #d4a855; color: #d4a855; }
+    .action-group { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+    .action-btn { width: 100%; padding: 10px 0; background: transparent; border: 1px solid rgba(180,140,70,0.3); border-radius: 4px; color: rgba(180,140,70,0.7); font-size: 11px; cursor: pointer; }
+    .action-btn:hover { background: rgba(180,140,70,0.08); color: #d4a855; }
+    .undo-redo { display: flex; gap: 8px; }
+    
+    /* AIあらすじ表示 */
+    .ai-summary {
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 5px;
+      font-size: 10px;
+      color: rgba(180,140,70,0.7);
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="shelf.html" class="nav-link">📚 本棚</a>
+    <a href="atelier.html" class="nav-link active">✒️ アトリエ</a>
+    <a href="plaza.html" class="nav-link">🕊️ 広場</a>
+    <a href="skins.html" class="nav-link">🎨 スキン</a>
+    <a href="profile.html" class="nav-link">👤 プロフィール</a>
+  </nav>
+
+  <div class="atelier-bg" id="atelierBg">
+    <div class="atelier-desk">
+      <div class="tool-panel">
+        <button class="tool-btn active" data-tool="pen" title="ペン">✒️</button>
+        <button class="tool-btn" data-tool="eraser" title="消しゴム">◯</button>
+        <button class="tool-btn" data-tool="line" title="直線">📏</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn" data-tool="text" title="文字">🄰</button>
+        <button class="tool-btn" data-tool="move" title="移動">✥</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn" data-tool="shape" title="図形">🔷</button>
+        <button class="tool-btn" data-tool="image" title="画像">🖼️</button>
+        <div class="tool-divider"></div>
+        <button class="tool-btn" data-tool="eyedropper" title="スポイト">🎨</button>
+        <button class="tool-btn" data-tool="grid" title="グリッド表示">🔲</button>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="atelierCanvas" width="560" height="780"></canvas>
+        <div class="grid-overlay" id="gridOverlay"></div>
+        <div class="page-controls">
+          <button class="page-btn" id="prevPageBtn">◀</button>
+          <span class="page-indicator" id="pageIndicator">1 / 1</span>
+          <button class="page-btn" id="nextPageBtn">▶</button>
+          <button class="page-add-btn" id="addPageBtn">+</button>
+        </div>
+      </div>
+
+      <div class="prop-panel">
+        <div class="prop-section">
+          <div class="prop-label">カラー</div>
+          <div class="prop-colors" id="colorPalette"></div>
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">ペン / 線 サイズ</div>
+          <div class="prop-sizes">
+            <button class="size-btn" data-size="3">細</button>
+            <button class="size-btn active" data-size="6">中</button>
+            <button class="size-btn" data-size="12">太</button>
+            <button class="size-btn" data-size="20">極太</button>
+          </div>
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">消しゴム範囲</div>
+          <div class="slider-label"><span>小</span><span id="eraserSizeLabel">中</span><span>大</span></div>
+          <input class="prop-slider" type="range" id="eraserSizeSlider" min="10" max="60" value="25">
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">透明度</div>
+          <input class="prop-slider" type="range" id="opacitySlider" min="0" max="100" value="100">
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">図形選択</div>
+          <div class="shape-buttons">
+            <button class="shape-btn" data-shape="circle">●</button>
+            <button class="shape-btn" data-shape="square">■</button>
+            <button class="shape-btn" data-shape="triangle">▲</button>
+            <button class="shape-btn" data-shape="star">★</button>
+            <button class="shape-btn" data-shape="heart">❤️</button>
+          </div>
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">フォント</div>
+          <select class="font-select" id="fontSelect">
+            <option value="'Noto Serif JP', serif">明朝体</option>
+            <option value="'游ゴシック', sans-serif">ゴシック体</option>
+            <option value="monospace">等幅</option>
+          </select>
+        </div>
+        <div class="prop-section">
+          <div class="prop-label">テンプレート</div>
+          <div class="template-row" id="templateRow"></div>
+        </div>
+        
+        <!-- モード切替 -->
+        <div class="prop-section">
+          <div class="prop-label">創作モード</div>
+          <div class="mode-switch">
+            <button class="mode-btn active" data-mode="normal">🎨 通常</button>
+            <button class="mode-btn" data-mode="diary">📖 日記モード</button>
+          </div>
+        </div>
+        
+        <div class="undo-redo">
+          <button class="action-btn" id="undoBtn">↩️ 戻す</button>
+          <button class="action-btn" id="redoBtn">↪️ やり直し</button>
+        </div>
+        <div class="action-group">
+          <button class="action-btn" id="clearCurrentPageBtn">このページをクリア</button>
+          <button class="action-btn" id="clearAllPagesBtn">全ページ削除</button>
+          <button class="action-btn" id="saveBtn">📖 本として保存</button>
+          <button class="action-btn" id="exportBtn">表紙を書き出し</button>
+          <button class="action-btn" id="aiSummaryBtn">✨ AIあらすじ生成</button>
+        </div>
+        <div class="ai-summary" id="aiSummary">✨ AIあらすじを生成するとここに表示されます</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eraser-cursor" id="eraserCursor"></div>
+
+  <script>
+    (function() {
+      // スキン適用
+      const savedSkinCss = localStorage.getItem('atelierSkinCss');
+      if (savedSkinCss) document.getElementById('atelierBg').style.cssText = savedSkinCss;
+      
+      const canvas = document.getElementById('atelierCanvas');
+      const ctx = canvas.getContext('2d');
+      const eraserCursor = document.getElementById('eraserCursor');
+      const gridOverlay = document.getElementById('gridOverlay');
+
+      const W = 560, H = 780;
+      const DPR = window.devicePixelRatio || 1;
+      canvas.width = W * DPR;
+      canvas.height = H * DPR;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      // モード管理
+      let currentMode = 'normal'; // 'normal' or 'diary'
+      
+      // 日記モード用の日付
+      function getTodayDate() {
+        const today = new Date();
+        return `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+      }
+
+      // 履歴管理
+      let history = [];
+      let historyIndex = -1;
+      const MAX_HISTORY = 50;
+
+      function saveToHistory() {
+        const page = pages[currentPageIndex];
+        const snapshot = {
+          drawings: JSON.parse(JSON.stringify(page.drawings)),
+          texts: JSON.parse(JSON.stringify(page.texts)),
+          images: page.images.map(img => ({ id: img.id, x: img.x, y: img.y, w: img.w, h: img.h, src: img.imageElement.src }))
+        };
+        history = history.slice(0, historyIndex + 1);
+        history.push(snapshot);
+        if (history.length > MAX_HISTORY) history.shift();
+        historyIndex = history.length - 1;
+      }
+
+      function undo() { if (historyIndex > 0) { historyIndex--; restoreFromHistory(history[historyIndex]); } }
+      function redo() { if (historyIndex < history.length - 1) { historyIndex++; restoreFromHistory(history[historyIndex]); } }
+
+      function restoreFromHistory(snapshot) {
+        const page = pages[currentPageIndex];
+        page.drawings = JSON.parse(JSON.stringify(snapshot.drawings));
+        page.texts = JSON.parse(JSON.stringify(snapshot.texts));
+        page.images = [];
+        for (const imgData of snapshot.images) {
+          const img = new Image();
+          img.src = imgData.src;
+          img.onload = () => {
+            page.images.push({ id: imgData.id, imageElement: img, x: imgData.x, y: imgData.y, w: imgData.w, h: imgData.h });
+            redrawCurrentPage();
+          };
+        }
+        redrawCurrentPage();
+      }
+
+      // ページデータ
+      let pages = [];
+      let currentPageIndex = 0;
+      let selectedShape = 'circle';
+      let lineStartPoint = null;
+      let isDrawingLine = false;
+      let eraserSize = 25;
+      let hasTemplateBorder = false;
+      let templateBorderColor = '';
+
+      function createEmptyPage() { return { drawings: [], texts: [], images: [] }; }
+
+      function initPages() {
+        pages = [createEmptyPage()];
+        currentPageIndex = 0;
+        saveToHistory();
+        redrawCurrentPage();
+        updatePageIndicator();
+      }
+
+      function redrawCurrentPage() {
+        const page = pages[currentPageIndex];
+        if (!page) return;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#faf8f0';
+        ctx.fillRect(0, 0, W, H);
+        if (hasTemplateBorder) {
+          ctx.fillStyle = templateBorderColor;
+          ctx.globalAlpha = 0.5;
+          ctx.fillRect(0, 0, W, 4);
+          ctx.fillRect(0, H - 4, W, 4);
+          ctx.globalAlpha = 1;
+        }
+        page.drawings.forEach(d => {
+          ctx.save();
+          ctx.globalAlpha = d.opacity;
+          ctx.lineWidth = d.size;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = d.color;
+          ctx.beginPath();
+          d.points.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+          ctx.stroke();
+          ctx.restore();
+        });
+        page.texts.forEach(t => {
+          ctx.save();
+          ctx.globalAlpha = t.opacity;
+          ctx.fillStyle = t.color;
+          ctx.font = `${t.size}px ${t.font}`;
+          ctx.fillText(t.text, t.x, t.y);
+          ctx.restore();
+        });
+        page.images.forEach(img => { if (img.imageElement) ctx.drawImage(img.imageElement, img.x, img.y, img.w, img.h); });
+      }
+
+      function addImageToCurrentPage(imageElement, x, y, w, h) {
+        pages[currentPageIndex].images.push({ id: Date.now() + Math.random(), imageElement, x, y, w, h });
+        saveToHistory();
+        redrawCurrentPage();
+      }
+
+      function findObjectAt(x, y) {
+        const page = pages[currentPageIndex];
+        for (let i = page.images.length - 1; i >= 0; i--) {
+          const img = page.images[i];
+          if (x >= img.x && x <= img.x + img.w && y >= img.y && y <= img.y + img.h) return { type: 'image', obj: img };
+        }
+        for (let i = page.texts.length - 1; i >= 0; i--) {
+          const t = page.texts[i];
+          ctx.save();
+          ctx.font = `${t.size}px ${t.font}`;
+          const width = ctx.measureText(t.text).width;
+          ctx.restore();
+          if (x >= t.x - 5 && x <= t.x + width + 5 && y >= t.y - t.size && y <= t.y + 5) return { type: 'text', obj: t };
+        }
+        return null;
+      }
+
+      function addNewPage() {
+        pages.push(createEmptyPage());
+        currentPageIndex = pages.length - 1;
+        hasTemplateBorder = false;
+        saveToHistory();
+        redrawCurrentPage();
+        updatePageIndicator();
+      }
+
+      function goPrevPage() { if (currentPageIndex > 0) { currentPageIndex--; redrawCurrentPage(); updatePageIndicator(); } }
+      function goNextPage() { if (currentPageIndex < pages.length - 1) { currentPageIndex++; redrawCurrentPage(); updatePageIndicator(); } }
+      function updatePageIndicator() { document.getElementById('pageIndicator').textContent = `${currentPageIndex + 1} / ${pages.length}`; }
+      function clearCurrentPage() { if (confirm('このページの内容をすべて消去しますか？')) { pages[currentPageIndex] = createEmptyPage(); hasTemplateBorder = false; saveToHistory(); redrawCurrentPage(); } }
+      function clearAllPages() { if (confirm('すべてのページを削除しますか？')) initPages(); }
+
+      // 描画操作
+      let currentPoints = [];
+      let drawingColor = '#2a1f0e';
+      let drawingSize = 6;
+      let drawingOpacity = 1;
+
+      const state = {
+        tool: 'pen', color: '#2a1f0e', size: 6, opacity: 1, font: "'Noto Serif JP', serif",
+        drawing: false, draggingObject: null, dragOffsetX: 0, dragOffsetY: 0, dragType: null
+      };
+
+      function addTextToCurrentPage(text, x, y) {
+        pages[currentPageIndex].texts.push({
+          id: Date.now() + Math.random(), text, x, y, color: state.color,
+          size: state.size * 2.5 + 12, font: state.font, opacity: state.opacity
+        });
+        saveToHistory();
+        redrawCurrentPage();
+      }
+
+      function saveDrawingToCurrentPage(points, color, size, opacity) {
+        if (points.length < 2) return;
+        pages[currentPageIndex].drawings.push({ points: [...points], color, size, opacity });
+        saveToHistory();
+      }
+
+      function eraseAt(x, y, radius) {
+        const page = pages[currentPageIndex];
+        if (hasTemplateBorder && (y < 10 || y > H - 10)) return;
+        page.drawings = page.drawings.filter(d => !d.points.some(p => Math.hypot(p.x - x, p.y - y) < radius));
+        page.texts = page.texts.filter(t => {
+          ctx.save();
+          ctx.font = `${t.size}px ${t.font}`;
+          const width = ctx.measureText(t.text).width;
+          ctx.restore();
+          return !(x >= t.x - 5 && x <= t.x + width + 5 && y >= t.y - t.size && y <= t.y + 5);
+        });
+        page.images = page.images.filter(img => !(x >= img.x && x <= img.x + img.w && y >= img.y && y <= img.y + img.h));
+        saveToHistory();
+        redrawCurrentPage();
+      }
+
+      function drawLine(start, end, color, size, opacity) {
+        pages[currentPageIndex].drawings.push({ points: [{ x: start.x, y: start.y }, { x: end.x, y: end.y }], color, size, opacity });
+        saveToHistory();
+        redrawCurrentPage();
+      }
+
+      function drawShapeAt(ctx, shape, x, y, size, color, opacity) {
+        ctx.save();
+        ctx.globalAlpha = opacity;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        const r = size * 3;
+        switch(shape) {
+          case 'circle': ctx.arc(x, y, r, 0, Math.PI * 2); break;
+          case 'square': ctx.rect(x - r, y - r, r * 2, r * 2); break;
+          case 'triangle':
+            for (let i = 0; i < 3; i++) {
+              const angle = i * Math.PI * 2 / 3 - Math.PI / 2;
+              const px = x + r * Math.cos(angle);
+              const py = y + r * Math.sin(angle);
+              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath(); break;
+          case 'star':
+            for (let i = 0; i < 10; i++) {
+              const rad = Math.PI * 2 / 10 * i - Math.PI / 2;
+              const radR = i % 2 === 0 ? r : r * 0.4;
+              const px = x + radR * Math.cos(rad);
+              const py = y + radR * Math.sin(rad);
+              if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+            }
+            ctx.closePath(); break;
+          case 'heart':
+            ctx.moveTo(x, y + r * 0.6);
+            ctx.bezierCurveTo(x - r, y - r * 0.8, x - r * 1.5, y + r * 0.3, x, y + r);
+            ctx.bezierCurveTo(x + r * 1.5, y + r * 0.3, x + r, y - r * 0.8, x, y + r * 0.6);
+            break;
+        }
+        ctx.fill();
+        ctx.restore();
+        pages[currentPageIndex].drawings.push({ points: [{ x, y }], color, size: size * 3, opacity, shape });
+        saveToHistory();
+      }
+
+      function eyedropper(x, y) {
+        const pixel = ctx.getImageData(x, y, 1, 1).data;
+        const hex = '#' + ((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1);
+        state.color = hex;
+        document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+        const targetDot = Array.from(document.querySelectorAll('.color-dot')).find(d => d.style.background === hex);
+        if (targetDot) targetDot.classList.add('active');
+      }
+
+      // AIあらすじ生成（簡易版）
+      function generateAISummary() {
+        const allTexts = pages.map(page => page.texts.map(t => t.text).join(' ')).join(' ');
+        if (!allTexts.trim()) {
+          document.getElementById('aiSummary').innerHTML = '📝 テキストがありません。文字を配置してから生成してください。';
+          return;
+        }
+        
+        // 簡易的なあらすじ生成（キーワード抽出）
+        const keywords = allTexts.slice(0, 100);
+        const firstPageText = pages[0]?.texts.map(t => t.text).join(' ') || '';
+        const lastPageText = pages[pages.length - 1]?.texts.map(t => t.text).join(' ') || '';
+        
+        let summary = '';
+        if (currentMode === 'diary') {
+          summary = `📖 ${getTodayDate()}の日記。${keywords.slice(0, 50)}...`;
+        } else {
+          summary = `この物語は「${firstPageText.slice(0, 30)}...」から始まり、「${lastPageText.slice(0, 30)}...」へと続きます。`;
+        }
+        
+        document.getElementById('aiSummary').innerHTML = `✨ ${summary}`;
+        return summary;
+      }
+
+      // カラーパレット
+      const COLORS = ['#2a1f0e', '#d4a855', '#8B4513', '#1a3a5c', '#2d5a2d', '#4a2d6b', '#6b2d2d', '#1a4a4a', '#faf8f0', '#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#f39c12', '#e67e22', '#2c3e50', '#e74c3c', '#16a085'];
+      const palette = document.getElementById('colorPalette');
+      COLORS.forEach(c => {
+        const dot = document.createElement('div');
+        dot.className = 'color-dot' + (c === state.color ? ' active' : '');
+        dot.style.background = c;
+        dot.addEventListener('click', () => {
+          document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+          dot.classList.add('active');
+          state.color = c;
+        });
+        palette.appendChild(dot);
+      });
+
+      // ツール切替
+      document.querySelectorAll('.tool-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tool = btn.dataset.tool;
+          if (tool === 'grid') { gridOverlay.classList.toggle('show'); return; }
+          if (tool === 'eyedropper') { state.tool = 'eyedropper'; canvas.style.cursor = 'crosshair'; return; }
+          document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.tool = tool;
+          const cursors = { pen: 'crosshair', eraser: 'cell', text: 'text', image: 'default', shape: 'crosshair', move: 'grab', line: 'crosshair' };
+          canvas.style.cursor = cursors[state.tool] || 'default';
+          if (state.tool === 'image') pickImage();
+          state.draggingObject = null;
+          lineStartPoint = null;
+          eraserCursor.style.display = state.tool === 'eraser' ? 'block' : 'none';
+        });
+      });
+
+      // モード切替
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentMode = btn.dataset.mode;
+          if (currentMode === 'diary') {
+            // 日記モードでは最初のページに日付を自動挿入
+            if (pages[currentPageIndex].texts.length === 0 && pages[currentPageIndex].drawings.length === 0) {
+              addTextToCurrentPage(`${getTodayDate()} の日記`, 50, 80);
+            }
+          }
+        });
+      });
+
+      document.querySelectorAll('.shape-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedShape = btn.dataset.shape;
+        });
+      });
+      document.querySelector('.shape-btn').classList.add('active');
+
+      document.querySelectorAll('.size-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.size = parseInt(btn.dataset.size);
+        });
+      });
+
+      document.getElementById('opacitySlider').addEventListener('input', e => { state.opacity = parseInt(e.target.value) / 100; });
+      document.getElementById('fontSelect').addEventListener('change', e => { state.font = e.target.value; });
+      document.getElementById('eraserSizeSlider').addEventListener('input', e => {
+        eraserSize = parseInt(e.target.value);
+        const label = document.getElementById('eraserSizeLabel');
+        if (eraserSize < 20) label.textContent = '小';
+        else if (eraserSize < 40) label.textContent = '中';
+        else label.textContent = '大';
+      });
+      document.getElementById('undoBtn').addEventListener('click', undo);
+      document.getElementById('redoBtn').addEventListener('click', redo);
+      document.getElementById('aiSummaryBtn').addEventListener('click', generateAISummary);
+
+      // テンプレート
+      const TEMPLATES = [{ bg: '#1a3a5c', fg: '#d4a855' }, { bg: '#faf8f0', fg: '#2a1f0e' }, { bg: '#2d1a0e', fg: '#c0a060' }];
+      const templateRow = document.getElementById('templateRow');
+      TEMPLATES.forEach(t => {
+        const thumb = document.createElement('div');
+        thumb.className = 'template-thumb';
+        thumb.style.background = t.bg;
+        thumb.innerHTML = `<div style="flex:1;background:${t.fg};opacity:0.25"></div><div style="height:40%;background:${t.bg};border-top:2px solid ${t.fg}"></div>`;
+        thumb.addEventListener('click', () => {
+          if (confirm('テンプレートを適用しますか？')) {
+            pages[currentPageIndex] = createEmptyPage();
+            hasTemplateBorder = true;
+            templateBorderColor = t.fg;
+            ctx.clearRect(0, 0, W, H);
+            ctx.fillStyle = t.bg;
+            ctx.fillRect(0, 0, W, H);
+            ctx.fillStyle = t.fg;
+            ctx.globalAlpha = 0.5;
+            ctx.fillRect(0, 0, W, 4);
+            ctx.fillRect(0, H - 4, W, 4);
+            ctx.globalAlpha = 1;
+            saveToHistory();
+            
+            // 日記モードなら日付を追加
+            if (currentMode === 'diary') {
+              addTextToCurrentPage(`${getTodayDate()} の日記`, 50, 80);
+            }
+          }
+        });
+        templateRow.appendChild(thumb);
+      });
+
+      function getPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = W / rect.width;
+        const scaleY = H / rect.height;
+        const src = e.touches ? e.touches[0] : e;
+        let x = (src.clientX - rect.left) * scaleX;
+        let y = (src.clientY - rect.top) * scaleY;
+        x = Math.min(Math.max(0, x), W);
+        y = Math.min(Math.max(0, y), H);
+        return { x, y };
+      }
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (state.tool === 'eraser') {
+          const rect = canvas.getBoundingClientRect();
+          const eraserRadius = eraserSize * (W / rect.width);
+          eraserCursor.style.width = eraserRadius * 2 + 'px';
+          eraserCursor.style.height = eraserRadius * 2 + 'px';
+          eraserCursor.style.left = (e.clientX - eraserRadius) + 'px';
+          eraserCursor.style.top = (e.clientY - eraserRadius) + 'px';
+        }
+      });
+      canvas.addEventListener('mouseleave', () => { eraserCursor.style.display = 'none'; });
+      canvas.addEventListener('mouseenter', () => { if (state.tool === 'eraser') eraserCursor.style.display = 'block'; });
+
+      canvas.addEventListener('mousedown', onStart);
+      canvas.addEventListener('mousemove', onMove);
+      canvas.addEventListener('mouseup', onEnd);
+      canvas.addEventListener('mouseleave', onEnd);
+      canvas.addEventListener('touchstart', e => { e.preventDefault(); onStart(e); });
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); onMove(e); });
+      canvas.addEventListener('touchend', onEnd);
+
+      function onStart(e) {
+        const pos = getPos(e);
+        if (state.tool === 'eyedropper') { eyedropper(pos.x, pos.y); state.tool = 'pen'; document.querySelector('[data-tool="pen"]').classList.add('active'); return; }
+        if (state.tool === 'move') {
+          const obj = findObjectAt(pos.x, pos.y);
+          if (obj) {
+            state.draggingObject = obj.obj;
+            state.dragType = obj.type;
+            state.dragOffsetX = pos.x - obj.obj.x;
+            state.dragOffsetY = pos.y - obj.obj.y;
+            canvas.style.cursor = 'grabbing';
+          }
+          return;
+        }
+        if (state.tool === 'text') {
+          let defaultText = '';
+          if (currentMode === 'diary') defaultText = '今日は...';
+          const text = prompt('📖 テキストを入力してください', defaultText);
+          if (text && text.trim()) addTextToCurrentPage(text.trim(), pos.x, pos.y);
+          return;
+        }
+        if (state.tool === 'shape') { drawShapeAt(ctx, selectedShape, pos.x, pos.y, state.size, state.color, state.opacity); return; }
+        if (state.tool === 'eraser') { eraseAt(pos.x, pos.y, eraserSize); return; }
+        if (state.tool === 'line') { lineStartPoint = pos; isDrawingLine = true; return; }
+        if (state.tool === 'pen') {
+          state.drawing = true;
+          currentPoints = [{ x: pos.x, y: pos.y }];
+          drawingColor = state.color;
+          drawingSize = state.size;
+          drawingOpacity = state.opacity;
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+          ctx.globalAlpha = state.opacity;
+          ctx.lineWidth = state.size;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = state.color;
+          ctx.lineTo(pos.x + 0.5, pos.y + 0.5);
+          ctx.stroke();
+        }
+      }
+
+      function onMove(e) {
+        if (state.tool === 'move' && state.draggingObject) {
+          const pos = getPos(e);
+          if (state.dragType === 'image') {
+            state.draggingObject.x = Math.min(Math.max(0, pos.x - state.dragOffsetX), W - state.draggingObject.w);
+            state.draggingObject.y = Math.min(Math.max(0, pos.y - state.dragOffsetY), H - state.draggingObject.h);
+          } else {
+            state.draggingObject.x = Math.min(Math.max(5, pos.x - state.dragOffsetX), W - 5);
+            state.draggingObject.y = Math.min(Math.max(20, pos.y - state.dragOffsetY), H - 10);
+          }
+          redrawCurrentPage();
+          return;
+        }
+        if (state.tool === 'line' && isDrawingLine && lineStartPoint) {
+          const pos = getPos(e);
+          redrawCurrentPage();
+          ctx.save();
+          ctx.globalAlpha = state.opacity;
+          ctx.beginPath();
+          ctx.moveTo(lineStartPoint.x, lineStartPoint.y);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.strokeStyle = state.color;
+          ctx.lineWidth = state.size;
+          ctx.stroke();
+          ctx.restore();
+          return;
+        }
+        if (state.tool === 'eraser') { eraseAt(getPos(e).x, getPos(e).y, eraserSize); return; }
+        if (!state.drawing) return;
+        const pos = getPos(e);
+        currentPoints.push({ x: pos.x, y: pos.y });
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+      }
+
+      function onEnd() {
+        if (state.tool === 'line' && isDrawingLine && lineStartPoint) {
+          const lastPos = currentPoints.length ? currentPoints[currentPoints.length - 1] : lineStartPoint;
+          drawLine(lineStartPoint, lastPos, state.color, state.size, state.opacity);
+          lineStartPoint = null;
+          isDrawingLine = false;
+          redrawCurrentPage();
+        }
+        if (state.tool === 'move' && state.draggingObject) {
+          state.draggingObject = null;
+          state.dragType = null;
+          canvas.style.cursor = 'grab';
+          saveToHistory();
+          return;
+        }
+        if (state.drawing && currentPoints.length >= 2) saveDrawingToCurrentPage(currentPoints, drawingColor, drawingSize, drawingOpacity);
+        state.drawing = false;
+        currentPoints = [];
+        ctx.globalAlpha = 1;
+      }
+
+      function pickImage() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = e => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = re => {
+            const img = new Image();
+            img.onload = () => {
+              let w = img.width, h = img.height;
+              const maxW = W * 0.5, maxH = H * 0.5;
+              if (w > maxW) { h = h * maxW / w; w = maxW; }
+              if (h > maxH) { w = w * maxH / h; h = maxH; }
+              addImageToCurrentPage(img, (W - w) / 2, (H - h) / 2, w, h);
+            };
+            img.src = re.target.result;
+          };
+          reader.readAsDataURL(file);
+        };
+        input.click();
+        setTimeout(() => {
+          const penBtn = document.querySelector('[data-tool="pen"]');
+          if (penBtn) {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            penBtn.classList.add('active');
+            state.tool = 'pen';
+            canvas.style.cursor = 'crosshair';
+          }
+        }, 300);
+      }
+
+      document.getElementById('prevPageBtn').addEventListener('click', goPrevPage);
+      document.getElementById('nextPageBtn').addEventListener('click', goNextPage);
+      document.getElementById('addPageBtn').addEventListener('click', addNewPage);
+      document.getElementById('clearCurrentPageBtn').addEventListener('click', clearCurrentPage);
+      document.getElementById('clearAllPagesBtn').addEventListener('click', clearAllPages);
+
+      // 保存（AIあらすじも保存）
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        const defaultTitle = currentMode === 'diary' ? `${getTodayDate()} の日記` : '無題の本';
+        const title = prompt('📖 本のタイトルを入力してください', defaultTitle);
+        if (!title) return;
+        const author = prompt('✍️ 著者名を入力してください', sessionStorage.getItem('userName') || '名無しの書き手');
+        if (!author) return;
+        
+        const pageContents = pages.map(page => page.texts.map(t => t.text).join('\n\n') || '');
+        const cover = canvas.toDataURL('image/png');
+        const pagesData = pages.map(page => ({ drawings: page.drawings, texts: page.texts, images: page.images.map(img => ({ x: img.x, y: img.y, w: img.w, h: img.h, src: img.imageElement.src })) }));
+        const aiSummary = generateAISummary();
+        
+        const saved = JSON.parse(localStorage.getItem('myBooks') || '[]');
+        saved.push({
+          id: Date.now(),
+          title: title,
+          author: author,
+          cover: cover,
+          pages: pageContents,
+          pagesData: pagesData,
+          aiSummary: aiSummary,
+          mode: currentMode,
+          views: 0,
+          likes: 0,
+          createdAt: Date.now()
+        });
+        localStorage.setItem('myBooks', JSON.stringify(saved));
+        alert(`✨ 「${title}」を本棚に保存しました！\n📄 ${pages.length}ページ\n${aiSummary}`);
+      });
+
+      document.getElementById('exportBtn').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'cover.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      });
+
+      initPages();
+      console.log('アトリエ準備完了！ ✨ AIあらすじ生成・日記モード搭載');
+    })();
+  </script>
+</body>
+</html>

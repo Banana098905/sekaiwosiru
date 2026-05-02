@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界を知る — 本棚</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Noto Serif JP', 'Georgia', serif; background: #1a1510; color: #d4bc8a; min-height: 100vh; }
+    
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 56px;
+      background: #1e140a;
+      border-bottom: 1px solid rgba(180,140,70,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 48px;
+      z-index: 100;
+    }
+    .nav-link {
+      color: rgba(180,140,70,0.45);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      transition: color 0.2s;
+    }
+    .nav-link:hover, .nav-link.active { color: #d4a855; }
+    
+    /* スキン用背景 */
+    .shelf-bg {
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      transition: background 0.3s;
+    }
+    
+    .bookshelf-area {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      padding: 20px 30px;
+    }
+    
+    /* コレクションタブ */
+    .collection-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 25px;
+      padding: 10px;
+      background: rgba(30,21,10,0.6);
+      border-radius: 40px;
+      backdrop-filter: blur(4px);
+    }
+    .collection-btn {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.25);
+      border-radius: 30px;
+      padding: 8px 18px;
+      font-size: 11px;
+      color: rgba(180,140,70,0.6);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .collection-btn:hover { background: rgba(180,140,70,0.1); color: #d4a855; }
+    .collection-btn.active { background: rgba(180,140,70,0.2); border-color: #d4a855; color: #d4a855; }
+    
+    /* カスタムコレクション作成 */
+    .custom-collection-input {
+      display: none;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 10px;
+    }
+    .custom-collection-input input {
+      background: #2a2015;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 20px;
+      padding: 6px 12px;
+      color: #d4bc8a;
+      font-size: 11px;
+    }
+    .custom-collection-input button {
+      background: rgba(180,140,70,0.2);
+      border: 1px solid #d4a855;
+      border-radius: 20px;
+      padding: 6px 15px;
+      color: #d4a855;
+      cursor: pointer;
+    }
+    
+    /* 本棚 */
+    .shelf-unit { max-width: 1200px; margin: 0 auto; }
+    .shelf-row { margin-bottom: 50px; position: relative; }
+    .shelf-plank {
+      position: relative;
+      height: 18px;
+      background: linear-gradient(to bottom, #6b3e1e 0%, #4a2a10 60%, #3a1e08 100%);
+      border-radius: 3px;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.5);
+      margin-top: 8px;
+    }
+    .shelf-plank::before {
+      content: '';
+      position: absolute;
+      top: -3px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(to bottom, rgba(180,140,70,0.3), transparent);
+    }
+    .shelf-label {
+      display: inline-block;
+      font-size: 9px;
+      color: rgba(180,140,70,0.25);
+      letter-spacing: 0.2em;
+      margin-bottom: 12px;
+      border-left: 2px solid rgba(180,140,70,0.3);
+      padding-left: 10px;
+    }
+    .books-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      min-height: 140px;
+    }
+    
+    /* 背表紙 */
+    .book-spine {
+      position: relative;
+      width: 38px;
+      border-radius: 2px 4px 4px 2px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 2px 0 6px rgba(0,0,0,0.4), inset -1px 0 rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    .book-spine:hover { transform: translateY(-12px) translateX(-2px); z-index: 10; }
+    .spine-title {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      font-size: 9px;
+      color: rgba(255,255,240,0.85);
+      text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+      padding: 8px 0;
+      width: 100%;
+      text-align: center;
+    }
+    .book-spine.bookmarked::after { content: '🔖'; position: absolute; top: -8px; right: -4px; font-size: 12px; }
+    
+    /* ポップアップ */
+    .book-popup {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #231a0c;
+      border: 1px solid rgba(180,140,70,0.4);
+      border-radius: 8px;
+      padding: 12px;
+      width: 240px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 20;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+    }
+    .book-spine:hover .book-popup {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .book-popup::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 7px solid transparent;
+      border-top-color: rgba(180,140,70,0.4);
+    }
+    .popup-title { font-size: 11px; color: #d4a855; margin-bottom: 4px; }
+    .popup-author { font-size: 9px; color: rgba(180,140,70,0.5); margin-bottom: 6px; }
+    .popup-stats { display: flex; gap: 12px; font-size: 9px; color: rgba(180,140,70,0.4); margin-bottom: 8px; }
+    
+    /* 読書メモ */
+    .memo-area { margin-bottom: 8px; }
+    .memo-text {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 4px;
+      padding: 6px;
+      color: #d4bc8a;
+      font-size: 9px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    .memo-text:focus { outline: none; border-color: #d4a855; }
+    
+    .popup-progress { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+    .progress-btn {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-size: 8px;
+      cursor: pointer;
+      color: rgba(180,140,70,0.6);
+    }
+    .progress-btn:hover { background: rgba(180,140,70,0.2); }
+    .progress-btn.active { background: rgba(180,140,70,0.3); color: #d4a855; }
+    
+    .collection-btns { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+    .collection-add-btn {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      border-radius: 10px;
+      padding: 2px 6px;
+      font-size: 7px;
+      cursor: pointer;
+      color: rgba(180,140,70,0.5);
+    }
+    .collection-add-btn:hover { background: rgba(180,140,70,0.2); }
+    
+    .delete-btn {
+      background: transparent;
+      border: 1px solid rgba(200,80,80,0.3);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 9px;
+      cursor: pointer;
+      color: rgba(200,80,80,0.7);
+      width: 100%;
+    }
+    .delete-btn:hover { background: rgba(200,80,80,0.2); color: #ff6b6b; }
+    
+    .empty-shelf { text-align: center; padding: 80px; color: rgba(180,140,70,0.3); }
+    .empty-shelf span { font-size: 48px; display: block; margin-bottom: 16px; }
+    
+    /* ビューワー */
+    .book-viewer {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 8, 5, 0.98);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .book-viewer.open { opacity: 1; pointer-events: all; }
+    .viewer-close {
+      position: absolute;
+      top: 24px;
+      right: 32px;
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      color: rgba(180,140,70,0.6);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .viewer-close:hover { border-color: #d4a855; color: #d4a855; }
+    .book-3d { display: flex; perspective: 1200px; }
+    .book-page {
+      width: 340px;
+      height: 460px;
+      background: #faf8f0;
+      padding: 32px 28px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.9;
+      color: #2a1f0e;
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+    .page-left { border-radius: 4px 0 0 4px; border-right: 1px solid #e0d8c8; }
+    .page-right { border-radius: 0 4px 4px 0; }
+    .book-spine-3d {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      bottom: 0;
+      width: 24px;
+      transform: translateX(-50%);
+      background: linear-gradient(to right, #3a2510, #6b3e1e, #3a2510);
+      border-radius: 2px;
+      z-index: 5;
+    }
+    .viewer-controls { display: flex; gap: 24px; margin-top: 28px; }
+    .viewer-nav {
+      background: transparent;
+      border: 1px solid rgba(180,140,70,0.3);
+      color: rgba(180,140,70,0.7);
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .viewer-nav:hover { border-color: #d4a855; color: #d4a855; }
+    .page-num { font-size: 12px; color: rgba(180,140,70,0.45); }
+    
+    .copyright {
+      font-size: 8px;
+      color: rgba(42,31,14,0.3);
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="shelf.html" class="nav-link active">📚 本棚</a>
+    <a href="atelier.html" class="nav-link">✒️ アトリエ</a>
+    <a href="plaza.html" class="nav-link">🕊️ 広場</a>
+    <a href="skins.html" class="nav-link">🎨 スキン</a>
+    <a href="profile.html" class="nav-link">👤 プロフィール</a>
+  </nav>
+
+  <div class="shelf-bg" id="shelfBg">
+    <div class="bookshelf-area">
+      <!-- コレクションタブ -->
+      <div class="collection-tabs">
+        <button class="collection-btn active" data-collection="all">📚 すべて</button>
+        <button class="collection-btn" data-collection="favorites">⭐ お気に入り</button>
+        <button class="collection-btn" data-collection="reading">📖 読書中</button>
+        <button class="collection-btn" data-collection="read">✅ 読了</button>
+        <button class="collection-btn" data-collection="want">📚 積読</button>
+        <button class="collection-btn" id="customCollectionBtn">➕ 新規コレクション</button>
+      </div>
+      <div class="custom-collection-input" id="customCollectionInput">
+        <input type="text" id="newCollectionName" placeholder="コレクション名">
+        <button id="createCollectionBtn">作成</button>
+        <button id="cancelCollectionBtn">キャンセル</button>
+      </div>
+      
+      <div class="shelf-unit" id="shelfUnit"></div>
+    </div>
+  </div>
+
+  <!-- ビューワー -->
+  <div class="book-viewer" id="bookViewer">
+    <button class="viewer-close" id="viewerClose">✕</button>
+    <div class="book-3d" id="book3d">
+      <div class="book-page page-left" id="pageLeft"></div>
+      <div class="book-page page-right" id="pageRight"></div>
+      <div class="book-spine-3d"></div>
+    </div>
+    <div class="viewer-controls">
+      <button class="viewer-nav" id="prevPage">‹</button>
+      <span class="page-num" id="pageNum">1 / 1</span>
+      <button class="viewer-nav" id="nextPage">›</button>
+    </div>
+  </div>
+
+  <script>
+    // スキン適用
+    const savedSkinCss = localStorage.getItem('shelfSkinCss');
+    if (savedSkinCss) document.getElementById('shelfBg').style.cssText = savedSkinCss;
+    
+    let myBooks = [];
+    let collections = JSON.parse(localStorage.getItem('collections') || '{"favorites":[],"reading":[],"read":[],"want":[],"custom":{}}');
+    let currentCollection = 'all';
+    
+    function getBookColor(title) {
+      const colors = ['#1a3a5c', '#2d5a2d', '#4a2d6b', '#6b2d2d', '#1a4a4a', '#5c3d1a', '#3d4a1a', '#2a3d5c', '#6b3d1a', '#4a1a3d'];
+      let hash = 0;
+      for (let i = 0; i < title.length; i++) hash = ((hash << 5) - hash) + title.charCodeAt(i);
+      return colors[Math.abs(hash) % colors.length];
+    }
+    
+    function loadBooks() {
+      const saved = localStorage.getItem('myBooks');
+      myBooks = saved ? JSON.parse(saved) : [];
+      if (myBooks.length === 0) {
+        myBooks = [
+          { id: 1, title: '銀河の果て', author: '星野 一', pages: ['第一章\n\n宇宙の果てで見つけた光。'], views: 156, likes: 23, bookmarked: true, memo: '感動した', createdAt: Date.now() - 86400000 * 3 },
+          { id: 2, title: '雨の図書館', author: '木村 葵', pages: ['古い図書館に眠る物語。'], views: 89, likes: 12, bookmarked: false, memo: '', createdAt: Date.now() - 86400000 * 5 }
+        ];
+        localStorage.setItem('myBooks', JSON.stringify(myBooks));
+      }
+      renderShelf();
+    }
+    
+    function getFilteredBooks() {
+      if (currentCollection === 'all') return myBooks;
+      if (currentCollection === 'favorites') return myBooks.filter(b => b.bookmarked);
+      if (currentCollection === 'reading') return myBooks.filter(b => b.progress === 'reading');
+      if (currentCollection === 'read') return myBooks.filter(b => b.progress === 'read');
+      if (currentCollection === 'want') return myBooks.filter(b => b.progress === 'want');
+      if (collections.custom[currentCollection]) {
+        return myBooks.filter(b => collections.custom[currentCollection].includes(b.id));
+      }
+      return myBooks;
+    }
+    
+    function renderShelf() {
+      const container = document.getElementById('shelfUnit');
+      if (!container) return;
+      
+      const filteredBooks = getFilteredBooks();
+      if (filteredBooks.length === 0) {
+        container.innerHTML = `<div class="empty-shelf"><span>📚</span>本が見つかりませんでした</div>`;
+        return;
+      }
+      
+      const booksPerRow = 8;
+      const rows = [];
+      for (let i = 0; i < filteredBooks.length; i += booksPerRow) rows.push(filteredBooks.slice(i, i + booksPerRow));
+      
+      let html = '';
+      rows.forEach((row, i) => {
+        html += `<div class="shelf-row"><div class="shelf-label">📖 ${String(i + 1).padStart(2, '0')} 段目</div><div class="books-row" id="booksRow${i}"></div><div class="shelf-plank"></div></div>`;
+      });
+      container.innerHTML = html;
+      
+      rows.forEach((row, i) => {
+        const rowContainer = document.getElementById(`booksRow${i}`);
+        if (!rowContainer) return;
+        row.forEach(book => {
+          const color = getBookColor(book.title);
+          const height = 60 + Math.min(60, (book.views || 0) / 5);
+          const progress = book.progress || 'want';
+          
+          const spine = document.createElement('div');
+          spine.className = `book-spine ${book.bookmarked ? 'bookmarked' : ''}`;
+          spine.style.background = color;
+          spine.style.height = height + 'px';
+          spine.style.width = '38px';
+          
+          spine.innerHTML = `
+            <div class="spine-title">${book.title.length > 5 ? book.title.slice(0, 5) + '…' : book.title}</div>
+            <div class="book-popup">
+              <div class="popup-title">${book.title}</div>
+              <div class="popup-author">${book.author}</div>
+              <div class="popup-stats"><span>👁️ ${book.views || 0}</span><span>❤️ ${book.likes || 0}</span></div>
+              <div class="memo-area">
+                <textarea class="memo-text" data-id="${book.id}" placeholder="読書メモ...">${book.memo || ''}</textarea>
+              </div>
+              <div class="popup-progress">
+                <button class="progress-btn ${progress === 'reading' ? 'active' : ''}" data-progress="reading" data-id="${book.id}">📖 読中</button>
+                <button class="progress-btn ${progress === 'read' ? 'active' : ''}" data-progress="read" data-id="${book.id}">✅ 読了</button>
+                <button class="progress-btn ${progress === 'want' ? 'active' : ''}" data-progress="want" data-id="${book.id}">📚 積読</button>
+              </div>
+              <div class="collection-btns">
+                <button class="collection-add-btn" data-collection="favorites" data-id="${book.id}">⭐ お気に入り</button>
+                ${Object.keys(collections.custom).map(c => `<button class="collection-add-btn" data-collection="${c}" data-id="${book.id}">📁 ${c}</button>`).join('')}
+              </div>
+              <button class="delete-btn" data-id="${book.id}">🗑️ 削除</button>
+            </div>
+          `;
+          
+          spine.addEventListener('click', () => openBook(book));
+          rowContainer.appendChild(spine);
+        });
+      });
+      
+      // メモ保存
+      document.querySelectorAll('.memo-text').forEach(ta => {
+        ta.addEventListener('blur', (e) => {
+          const bookId = parseInt(e.target.dataset.id);
+          const book = myBooks.find(b => b.id === bookId);
+          if (book) {
+            book.memo = e.target.value;
+            localStorage.setItem('myBooks', JSON.stringify(myBooks));
+          }
+        });
+      });
+      
+      // 進捗ボタン
+      document.querySelectorAll('.progress-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = parseInt(btn.dataset.id);
+          const progress = btn.dataset.progress;
+          const book = myBooks.find(b => b.id === bookId);
+          if (book) {
+            book.progress = progress;
+            localStorage.setItem('myBooks', JSON.stringify(myBooks));
+            renderShelf();
+          }
+        });
+      });
+      
+      // コレクション追加ボタン
+      document.querySelectorAll('.collection-add-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = parseInt(btn.dataset.id);
+          const collectionName = btn.dataset.collection;
+          addToCollection(bookId, collectionName);
+        });
+      });
+      
+      // 削除ボタン
+      document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const bookId = parseInt(btn.dataset.id);
+          if (confirm('この本を削除しますか？')) {
+            myBooks = myBooks.filter(b => b.id !== bookId);
+            localStorage.setItem('myBooks', JSON.stringify(myBooks));
+            renderShelf();
+          }
+        });
+      });
+    }
+    
+    function addToCollection(bookId, collectionName) {
+      if (collectionName === 'favorites') {
+        const book = myBooks.find(b => b.id === bookId);
+        if (book) book.bookmarked = !book.bookmarked;
+        localStorage.setItem('myBooks', JSON.stringify(myBooks));
+      } else if (collections.custom[collectionName]) {
+        if (!collections.custom[collectionName].includes(bookId)) {
+          collections.custom[collectionName].push(bookId);
+          localStorage.setItem('collections', JSON.stringify(collections));
+        }
+      }
+      renderShelf();
+    }
+    
+    // コレクションタブ切り替え
+    document.querySelectorAll('.collection-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.id === 'customCollectionBtn') {
+          document.getElementById('customCollectionInput').style.display = 'flex';
+          return;
+        }
+        document.querySelectorAll('.collection-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCollection = btn.dataset.collection;
+        renderShelf();
+      });
+    });
+    
+    document.getElementById('createCollectionBtn')?.addEventListener('click', () => {
+      const name = document.getElementById('newCollectionName').value.trim();
+      if (name && !collections.custom[name]) {
+        collections.custom[name] = [];
+        localStorage.setItem('collections', JSON.stringify(collections));
+        // タブを再構築
+        location.reload();
+      }
+      document.getElementById('customCollectionInput').style.display = 'none';
+    });
+    
+    document.getElementById('cancelCollectionBtn')?.addEventListener('click', () => {
+      document.getElementById('customCollectionInput').style.display = 'none';
+    });
+    
+    // ビューワー
+    const bookViewer = document.getElementById('bookViewer');
+    const viewerClose = document.getElementById('viewerClose');
+    const pageLeft = document.getElementById('pageLeft');
+    const pageRight = document.getElementById('pageRight');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const pageNumEl = document.getElementById('pageNum');
+    
+    let currentBook = null;
+    let currentPage = 0;
+    
+    function formatText(text) { return text ? text.replace(/\n/g, '<br>') : ''; }
+    
+    function renderPages() {
+      if (!currentBook) return;
+      const pages = currentBook.pages || ['本文がありません'];
+      const leftIdx = currentPage * 2;
+      const rightIdx = currentPage * 2 + 1;
+      
+      pageLeft.innerHTML = leftIdx < pages.length ? `
+        <div style="font-size:10px;color:#aaa;margin-bottom:20px;">${currentBook.title}</div>
+        <div>${formatText(pages[leftIdx])}</div>
+        <div style="position:absolute;bottom:20px;left:28px;font-size:10px;color:#aaa;">${leftIdx + 1}</div>
+      ` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;">— 空白 —</div>`;
+      
+      pageRight.innerHTML = rightIdx < pages.length ? `
+        <div style="font-size:10px;color:#aaa;margin-bottom:20px;text-align:right;">${currentBook.author}</div>
+        <div>${formatText(pages[rightIdx])}</div>
+        <div style="position:absolute;bottom:20px;right:28px;font-size:10px;color:#aaa;">${rightIdx + 1}</div>
+        <div class="copyright">© ${new Date(currentBook.createdAt).getFullYear()} ${currentBook.author}</div>
+      ` : rightIdx === pages.length ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#aaa;">— 終わり —</div>` : '';
+      
+      const spreadCount = Math.ceil(pages.length / 2);
+      pageNumEl.textContent = `${currentPage + 1} / ${spreadCount}`;
+      prevBtn.disabled = currentPage === 0;
+      nextBtn.disabled = currentPage >= spreadCount - 1;
+    }
+    
+    function nextPage() { const spreadCount = Math.ceil((currentBook?.pages?.length || 0) / 2); if (currentPage < spreadCount - 1) { currentPage++; renderPages(); } }
+    function prevPage() { if (currentPage > 0) { currentPage--; renderPages(); } }
+    function incrementViews(book) { book.views = (book.views || 0) + 1; localStorage.setItem('myBooks', JSON.stringify(myBooks)); renderShelf(); }
+    
+    function openBook(book) {
+      currentBook = book;
+      currentPage = 0;
+      renderPages();
+      bookViewer.classList.add('open');
+      incrementViews(book);
+    }
+    
+    function closeViewer() { bookViewer.classList.remove('open'); }
+    
+    viewerClose.addEventListener('click', closeViewer);
+    prevBtn.addEventListener('click', prevPage);
+    nextBtn.addEventListener('click', nextPage);
+    bookViewer.addEventListener('click', (e) => { if (e.target === bookViewer) closeViewer(); });
+    document.addEventListener('keydown', (e) => {
+      if (!bookViewer.classList.contains('open')) return;
+      if (e.key === 'ArrowRight') nextPage();
+      if (e.key === 'ArrowLeft') prevPage();
+      if (e.key === 'Escape') closeViewer();
+    });
+    
+    loadBooks();
+  </script>
+</body>
+</html>

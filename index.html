@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>世界を知る</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/entrance.css">
+</head>
+<body>
+  <div class="entrance-bg">
+    <div class="lamp lamp-left"></div>
+    <div class="lamp lamp-right"></div>
+    <div class="book-cover">
+      <div class="ornament"><div class="ornament-line"></div><div class="ornament-diamond"></div><div class="ornament-line"></div></div>
+      <h1 class="site-title">世界を知る</h1>
+      <p class="site-subtitle">SEKAI WO SHIRU</p>
+      <div class="field-group"><label class="field-label">利用者の名</label><input class="field-input" type="text" id="username"></div>
+      <div class="field-group"><label class="field-label">合言葉</label><input class="field-input" type="password" id="password"></div>
+      <div class="error-msg" id="errorMsg"></div>
+      <button class="open-btn" id="openBtn">扉を開く</button>
+      <div class="register-area">はじめての方は<span class="register-link" id="registerLink">新しい書庫を開く</span></div>
+    </div>
+  </div>
+  <script>
+    document.getElementById('openBtn').addEventListener('click', () => {
+      window.location.href = 'shelf.html';
+    });
+  </script>
+</body>
+</html>
